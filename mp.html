@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>简易命盘工作台</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #f6f1e7;
+    color: #3a2f28;
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+  header {
+    background: linear-gradient(135deg, #7a1f1f 0%, #a03028 60%, #b8452f 100%);
+    color: #f5e6c4;
+    text-align: center;
+    padding: 36px 16px 30px;
+  }
+  header h1 {
+    font-size: 30px;
+    letter-spacing: 8px;
+    font-weight: 700;
+    text-shadow: 0 2px 6px rgba(0,0,0,.35);
+  }
+  header p {
+    margin-top: 10px;
+    font-size: 13px;
+    letter-spacing: 2px;
+    opacity: .85;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+  .card {
+    background: #fffdf8;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(90, 60, 30, .10);
+    padding: 26px 28px;
+    margin-top: 24px;
+    border: 1px solid #eadfc8;
+  }
+  .card h2 {
+    font-size: 17px;
+    color: #7a1f1f;
+    margin-bottom: 18px;
+    padding-left: 12px;
+    border-left: 4px solid #b8452f;
+    letter-spacing: 2px;
+  }
+  .form-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 13px; color: #8a7a66; }
+  .field input, .field select {
+    border: 1px solid #d8c9a8;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 15px;
+    background: #fff;
+    color: #3a2f28;
+    outline: none;
+    min-width: 150px;
+  }
+  .field input:focus, .field select:focus { border-color: #b8452f; }
+  button#btnGo {
+    background: linear-gradient(135deg, #a03028, #b8452f);
+    color: #fdf3dd;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 34px;
+    font-size: 16px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(160, 48, 40, .35);
+    transition: transform .15s;
+  }
+  button#btnGo:hover { transform: translateY(-2px); }
+  #result { display: none; }
+  .bazi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .pillar {
+    background: #faf4e6;
+    border: 1px solid #e8d9b5;
+    border-radius: 12px;
+    padding: 14px 8px;
+    text-align: center;
+  }
+  .pillar .p-label { font-size: 12px; color: #9a8a72; letter-spacing: 3px; }
+  .pillar .gan, .pillar .zhi {
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1.25;
+    font-family: "STKaiti", "KaiTi", "Noto Serif SC", serif;
+  }
+  .pillar .tag { font-size: 12px; padding: 2px 8px; border-radius: 10px; color: #fff; display: inline-block; margin-top: 6px; }
+  .pillar .shishen { font-size: 13px; color: #6b5b47; margin-top: 6px; }
+  .w-木 { color: #3e8e5a; background: #3e8e5a; }
+  .w-火 { color: #c0392b; background: #c0392b; }
+  .w-土 { color: #9a6b1f; background: #9a6b1f; }
+  .w-金 { color: #a07a28; background: #b08d3e; }
+  .w-水 { color: #2e6f9e; background: #2e6f9e; }
+  .gan.w-木, .gan.w-火, .gan.w-土, .gan.w-金, .gan.w-水,
+  .zhi.w-木, .zhi.w-火, .zhi.w-土, .zhi.w-金, .zhi.w-水 { background: transparent; }
+  .meta-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .chip {
+    background: #f3ead6;
+    border: 1px solid #e2d3b0;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 14px;
+  }
+  .chip b { color: #7a1f1f; }
+  .wx-bars { display: flex; flex-direction: column; gap: 10px; }
+  .wx-row { display: grid; grid-template-columns: 4.5em 1fr 2em; align-items: center; gap: 10px; font-size: 14px; }
+  .wx-row .name { letter-spacing: 2px; }
+  .wx-track { background: #efe7d2; border-radius: 8px; height: 16px; overflow: hidden; }
+  .wx-fill { height: 100%; border-radius: 8px; transition: width .6s ease; }
+  .interpret { line-height: 1.9; font-size: 14.5px; color: #4a3e33; }
+  .interpret h3 { font-size: 15px; color: #7a1f1f; margin: 14px 0 4px; }
+  .advice-box {
+    background: #faf4e6;
+    border-left: 4px solid #b8452f;
+    border-radius: 0 10px 10px 0;
+    padding: 12px 16px;
+    margin-top: 10px;
+    line-height: 1.8;
+    font-size: 14px;
+  }
+  .fortune-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .stars { font-size: 26px; color: #c0392b; letter-spacing: 4px; }
+  .fortune-pill { font-size: 15px; }
+  .fortune-pill .gz { font-family: "STKaiti","KaiTi",serif; font-size: 22px; color: #7a1f1f; font-weight: 700; }
+  .lvl { font-size: 13px; padding: 3px 12px; border-radius: 12px; color: #fff; }
+  .lvl-strong { background: #b8452f; }
+  .lvl-mid { background: #9a8a2f; }
+  .lvl-weak { background: #5a7a9a; }
+  footer {
+    text-align: center;
+    margin-top: 34px;
+    font-size: 12px;
+    color: #a5947c;
+    line-height: 1.8;
+  }
+  @media (max-width: 620px) {
+    .pillar .gan, .pillar .zhi { font-size: 30px; }
+    .wrap { padding: 0 10px; }
+    .card { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>简易命盘工作台</h1>
+  <p>输入出生信息 · 一键排出四柱八字与五行运势</p>
+</header>
+<div class="wrap">
+  <div class="card">
+    <h2>出生信息</h2>
+    <div class="form-row">
+      <div class="field">
+        <label>出生日期（公历）</label>
+        <input type="date" id="inDate" min="1900-01-01" max="2100-12-31">
+      </div>
+      <div class="field">
+        <label>出生时辰</label>
+        <select id="inHour">
+          <option value="-1">不确定</option>
+          <option value="0">子时 23:00-00:59</option>
+          <option value="1">丑时 01:00-02:59</option>
+          <option value="2">寅时 03:00-04:59</option>
+          <option value="3">卯时 05:00-06:59</option>
+          <option value="4">辰时 07:00-08:59</option>
+          <option value="5">巳时 09:00-10:59</option>
+          <option value="6" selected>午时 11:00-12:59</option>
+          <option value="7">未时 13:00-14:59</option>
+          <option value="8">申时 15:00-16:59</option>
+          <option value="9">酉时 17:00-18:59</option>
+          <option value="10">戌时 19:00-20:59</option>
+          <option value="11">亥时 21:00-22:59</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>性别（仅用于展示）</label>
+        <select id="inGender">
+          <option>男</option>
+          <option>女</option>
+        </select>
+      </div>
+      <button id="btnGo">排 盘</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>关系合盘 · 相处建议</h2>
+    <div class="form-row">
+      <div class="field">
+        <label>TA 的出生日期（公历）</label>
+        <input type="date" id="inDate2" min="1900-01-01" max="2100-12-31">
+      </div>
+      <div class="field">
+        <label>TA 的出生时辰</label>
+        <select id="inHour2"></select>
+      </div>
+      <button id="btnGo2">合 盘</button>
+    </div>
+    <div id="hepanResult" style="display:none; margin-top:18px;">
+      <div class="fortune-head" id="hepanHead"></div>
+      <div class="interpret" id="hepanText"></div>
+    </div>
+  </div>
+
+  <div id="result">
+    <div class="card">
+      <h2>四柱八字</h2>
+      <div class="bazi-grid" id="baziGrid"></div>
+      <div class="meta-chips" id="metaChips"></div>
+    </div>
+    <div class="card">
+      <h2>五行分布</h2>
+      <div class="wx-bars" id="wxBars"></div>
+    </div>
+    <div class="card">
+      <h2>命盘简析</h2>
+      <div class="interpret" id="interpret"></div>
+    </div>
+    <div class="card">
+      <h2>今日运势</h2>
+      <div class="fortune-head" id="fortuneHead"></div>
+      <div class="interpret" id="fortuneText"></div>
+    </div>
+  </div>
+<script>
+/* ============ 基础数据 ============ */
+const TG = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+const DZ = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+const SX = ["鼠","牛","虎","兔","龙","蛇","马","羊","猴","鸡","狗","猪"];
+const WXG = ["木","木","火","火","土","土","金","金","水","水"];          // 天干五行
+const WXZ = ["水","土","木","木","土","火","火","土","金","金","土","水"]; // 地支五行
+const ZHI_CANG = [9,5,0,1,4,2,3,5,6,7,4,8]; // 地支主气藏干(天干索引)
+const SHENG = {"木":"火","火":"土","土":"金","金":"水","水":"木"};   // 相生
+const KE   = {"木":"土","土":"水","水":"火","火":"金","金":"木"};   // 相克
+const WX_COLOR = {"木":"#3e8e5a","火":"#c0392b","土":"#9a6b1f","金":"#b08d3e","水":"#2e6f9e"};
+const WX_LIFE  = {"木":"绿色植物、东方、晨起舒展","火":"红色、阳光、运动与热情","土":"陶瓷、大地色、规律作息","金":"金属饰物、白色、整洁环境","水":"蓝色、亲水活动、静心阅读"};
+
+/* ============ 干支计算 ============ */
+// 节气近似日期: [月,日] 之后进入对应月份(丑寅卯...)
+const JIEQI = [[1,6],[2,4],[3,6],[4,5],[5,6],[6,6],[7,7],[8,8],[9,8],[10,8],[11,7],[12,7]];
+
+function dayGZIndex(y, m, d) { // 2000-01-07 为甲子日
+  const diff = Math.round((Date.UTC(y, m-1, d) - Date.UTC(2000, 0, 7)) / 86400000);
+  return ((diff % 60) + 60) % 60;
+}
+function monthIndex(m, d) { // 返回命历月序: 0=子月...11=亥月 的地支索引
+  let idx = -1;
+  for (let i = 0; i < 12; i++) {
+    if (m > JIEQI[i][0] || (m === JIEQI[i][0] && d >= JIEQI[i][1])) idx = i;
+  }
+  return (idx + 1) % 12; // 小寒后->丑(1), 立春后->寅(2), 大雪后->子(0)
+}
+function paipan(y, m, d, hourIdx) {
+  const hourKnown = hourIdx >= 0;
+  const hIdx = hourKnown ? hourIdx : 6; // 不确定按午时
+  // 年柱: 以立春(约2月4日)为界
+  let adjY = y;
+  if (m < 2 || (m === 2 && d < 4)) adjY = y - 1;
+  const yearIdx = ((adjY - 4) % 60 + 60) % 60;
+  const yStem = yearIdx % 10, yBranch = yearIdx % 12;
+  // 月柱
+  const mBranch = monthIndex(m, d);
+  const mStem = (((yStem % 5) * 2 + 2) + ((mBranch - 2 + 12) % 12)) % 10;
+  // 日柱
+  const dayIdx = dayGZIndex(y, m, d);
+  const dStem = dayIdx % 10, dBranch = dayIdx % 12;
+  // 时柱(五鼠遁)
+  const hStem = ((dStem % 5) * 2 + hIdx) % 10;
+  const hBranch = hIdx;
+  const pillars = [
+    { label: "年柱", stem: yStem, branch: yBranch, ten: null, hideTen: null },
+    { label: "月柱", stem: mStem, branch: mBranch, ten: null, hideTen: null },
+    { label: "日柱", stem: dStem, branch: dBranch, ten: "日主", hideTen: null },
+    { label: "时柱", stem: hStem, branch: hBranch, ten: null, hideTen: null }
+  ];
+  pillars.forEach(p => {
+    if (p.ten !== "日主") p.ten = tenGod(dStem, p.stem);
+    p.hideTen = tenGod(dStem, ZHI_CANG[p.branch]);
+  });
+  return { adjY, pillars, hourKnown, yBranch, dStem, dBranch };
+}
+
+/* ============ 十神 ============ */
+function tenGod(dayStem, other) {
+  const e1 = WXG[dayStem], e2 = WXG[other];
+  const same = (dayStem % 2) === (other % 2);
+  if (e1 === e2) return same ? "比肩" : "劫财";
+  if (SHENG[e2] === e1) return same ? "偏印" : "正印";   // 生我
+  if (SHENG[e1] === e2) return same ? "食神" : "伤官";   // 我生
+  if (KE[e1] === e2)    return same ? "偏财" : "正财";   // 我克
+  return same ? "七杀" : "正官";                          // 克我
+}
+
+/* ============ 五行统计与强弱 ============ */
+function wuxingStats(pillars) {
+  const cnt = {"木":0,"火":0,"土":0,"金":0,"水":0};
+  pillars.forEach(p => {
+    cnt[WXG[p.stem]] += 1.2;
+    cnt[WXZ[p.branch]] += 1.0;
+  });
+  return cnt;
+}
+function strength(pillars) {
+  const dayEl = WXG[pillars[2].stem];
+  let score = 0;
+  pillars.forEach((p, i) => {
+    if (i === 2) return;
+    const e1 = WXG[p.stem], e2 = WXZ[p.branch];
+    if (e1 === dayEl) score += 1.2; else if (SHENG[e1] === dayEl) score += 0.7;
+    if (e2 === dayEl) score += 1.0; else if (SHENG[e2] === dayEl) score += 0.6;
+  });
+  if (score >= 3.6) return { lvl: "strong", name: "偏强" };
+  if (score <= 2.0) return { lvl: "weak", name: "偏弱" };
+  return { lvl: "mid", name: "中和" };
+}
+function favorable(dayEl, lvl, cnt) {
+  if (lvl === "weak")  return [dayEl, Object.keys(SHENG).find(k => SHENG[k] === dayEl)];
+  if (lvl === "strong") return [KE[dayEl], SHENG[dayEl], KE[SHENG[dayEl]]];
+  const min = Object.keys(cnt).reduce((a, b) => cnt[a] <= cnt[b] ? a : b);
+  return [min];
+}
+
+/* ============ 星座 ============ */
+function xingzuo(m, d) {
+  const arr = [[1,20,"摩羯座"],[2,19,"水瓶座"],[3,21,"双鱼座"],[4,20,"白羊座"],[5,21,"金牛座"],
+    [6,22,"双子座"],[7,23,"巨蟹座"],[8,23,"狮子座"],[9,23,"处女座"],[10,24,"天秤座"],
+    [11,23,"天蝎座"],[12,22,"射手座"],[12,32,"摩羯座"]];
+  for (const [mm, dd, name] of arr) {
+    if (m < mm || (m === mm && d < dd)) return name;
+  }
+  return "摩羯座";
+}
+/* ============ 渲染 ============ */
+const $ = id => document.getElementById(id);
+
+function render(p) {
+  const grid = $("baziGrid");
+  grid.innerHTML = "";
+  p.pillars.forEach(pl => {
+    const gw = WXG[pl.stem], zw = WXZ[pl.branch];
+    const div = document.createElement("div");
+    div.className = "pillar";
+    div.innerHTML =
+      '<div class="p-label">' + pl.label + "</div>" +
+      '<div class="gan w-' + gw + '" style="color:' + WX_COLOR[gw] + '">' + TG[pl.stem] + "</div>" +
+      '<div class="zhi w-' + zw + '" style="color:' + WX_COLOR[zw] + '">' + DZ[pl.branch] + "</div>" +
+      '<div><span class="tag w-' + gw + '">' + gw + "</span> <span class=\"tag w-" + zw + '">' + zw + "</span></div>" +
+      '<div class="shishen">天干十神：' + pl.ten + "<br>支藏十神：" + pl.hideTen + "</div>";
+    grid.appendChild(div);
+  });
+  const [y, m, d] = $("inDate").value.split("-").map(Number);
+  const dayEl = WXG[p.pillars[2].stem];
+  const st = strength(p.pillars);
+  $("metaChips").innerHTML =
+    '<span class="chip">生肖：<b>' + SX[p.yBranch] + "</b></span>" +
+    '<span class="chip">星座：<b>' + xingzuo(m, d) + "</b></span>" +
+    '<span class="chip">日主：<b>' + TG[p.pillars[2].stem] + dayEl + "</b></span>" +
+    '<span class="chip">格局：<span class="lvl lvl-' + st.lvl + '">' + st.name + "</span></span>" +
+    (!p.hourKnown ? '<span class="chip" style="color:#b8452f">时辰未选，按午时估算</span>' : "");
+  // 五行条
+  const cnt = wuxingStats(p.pillars);
+  const total = Object.values(cnt).reduce((a, b) => a + b, 0);
+  const bars = $("wxBars");
+  bars.innerHTML = "";
+  for (const k of ["木","火","土","金","水"]) {
+    const pct = Math.round(cnt[k] / total * 100);
+    bars.innerHTML +=
+      '<div class="wx-row"><span class="name">' + k + '</span>' +
+      '<div class="wx-track"><div class="wx-fill" style="width:' + pct + "%;background:" + WX_COLOR[k] + '"></div></div>' +
+      "<span>" + pct + "%</span></div>";
+  }
+  // 简析
+  const fav = favorable(dayEl, st.lvl, cnt);
+  const lack = Object.keys(cnt).filter(k => cnt[k] === 0);
+  const gz = p.pillars.map(pl => TG[pl.stem] + DZ[pl.branch]).join(" ");
+  let html = "<h3>八字总览</h3><div>您的四柱为 <b>" + gz + "</b>。" +
+    "日主为<b>" + TG[p.pillars[2].stem] + dayEl + "</b>，整体五行力量<b>" + st.name + "</b>。";
+  if (lack.length) html += "命中缺少<b>" + lack.join("、") + "</b>，可在名字、方位、颜色上适当补足。";
+  html += "</div>";
+  html += "<h3>性格倾向</h3><div>" + dayElDesc(dayEl) + "</div>";
+  html += "<h3>喜用五行</h3><div>倾向于喜<b>" + fav.map(x => '<span style="color:' + WX_COLOR[x] + '">' + x + "</span>").join("、") +
+    "</b>。开运建议：多接触" + fav.map(f => WX_LIFE[f]).join("；") + "。</div>";
+  html += '<div class="advice-box">日主' + st.name + strengthAdvice(st.lvl) + "</div>";
+  $("interpret").innerHTML = html;
+  renderFortune(p);
+  $("result").style.display = "block";
+  $("result").scrollIntoView({ behavior: "smooth" });
+}
+
+function dayElDesc(el) {
+  return {
+    "木": "如春木生长，本性正直向上，仁厚有原则，做事讲计划与条理。",
+    "火": "如火般明亮热情，行动力强、感染力足，待人真诚但性情略急。",
+    "土": "厚重稳健，重信守诺，包容务实，是可靠的合作与依靠对象。",
+    "金": "果决刚毅，爱憎分明，做事干脆利落，重义气也重原则。",
+    "水": "聪慧灵动，思维活跃善于变通，好奇心强，适应能力出色。"
+  }[el];
+}
+function strengthAdvice(lvl) {
+  return {
+    strong: "者主观意识较强，宜学会倾听与妥协，避免固执己见；多借团队之力，事半功倍。",
+    mid: "者五行较为流通，性情张弛有度，顺势而为即可，不必刻意补救。",
+    weak: "者容易随环境和他人起伏，宜培养主见与决断，多亲近支持自己的贵人与环境。"
+  }[lvl];
+}
+
+/* ============ 今日运势 ============ */
+const LIUHE = { "子":"丑","丑":"子","寅":"亥","亥":"寅","卯":"戌","戌":"卯","辰":"酉","酉":"辰","巳":"申","申":"巳","午":"未","未":"午" };
+function renderFortune(p) {
+  const now = new Date();
+  const tIdx = dayGZIndex(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const tStem = tIdx % 10, tBranch = tIdx % 12;
+  const dayStem = p.dStem, dayBranch = p.dBranch;
+  const e1 = WXG[dayStem], e2 = WXG[tStem];
+  let score = 3, notes = [];
+  // 天干关系
+  if (e1 === e2) { score += 1; notes.push("今日干支与日主同气，做事顺心，合作洽谈皆宜。"); }
+  else if (KE[e1] === e2) { score += 1; notes.push("今日为「财」之日，适合谈钱谈合作，把握进账机会。"); }
+  else if (SHENG[e2] === e1) { score += 1; notes.push("今日有「印」相扶，易得长辈贵人相助，宜请教、签约、学习。"); }
+  else if (SHENG[e1] === e2) { notes.push("今日灵感与表达欲旺盛，宜创作输出，但注意言语分寸。"); }
+  else { score -= 1; notes.push("今日为「官杀」之日，压力略增，宜守规矩、避争执，稳字当头。"); }
+  // 地支关系
+  if (LIUHE[DZ[dayBranch]] === DZ[tBranch]) { score += 1; notes.push("地支六合，人缘运佳，是社交、和解的好日子。"); }
+  else if ((dayBranch + 12 - tBranch) % 12 === 6) { score -= 1; notes.push("地支相冲，今日变动较多，出行与重大决定宜谨慎。"); }
+  else if (dayBranch % 4 === tBranch % 4) { notes.push("地支三合局，气场相合，办事有助力。"); }
+  else { notes.push("地支平稳，无大起大落，按部就班即可。"); }
+  score = Math.max(1, Math.min(5, score));
+  $("fortuneHead").innerHTML =
+    '<span class="fortune-pill">今日 <span class="gz">' + TG[tStem] + DZ[tBranch] + '日</span>（' +
+    (now.getMonth() + 1) + "月" + now.getDate() + "日）</span>" +
+    '<span class="stars">' + "★".repeat(score) + "☆".repeat(5 - score) + "</span>" +
+    '<span class="chip"><b>' + (score >= 4 ? "吉日" : score >= 3 ? "平日" : "缓日") + "</b></span>";
+  $("fortuneText").innerHTML =
+    "<div style='margin-top:12px'>" + notes.map(n => "· " + n).join("<br>") + "</div>" +
+    '<div class="advice-box">开运提示：穿戴或配饰可多选喜用五行对应的颜色与材质，保持好心态，好运自然来。</div>';
+}
+
+/* ============ 事件 ============ */
+$("btnGo").addEventListener("click", () => {
+  const v = $("inDate").value;
+  if (!v) { alert("请先选择出生日期"); return; }
+  const [y, m, d] = v.split("-").map(Number);
+  render(paipan(y, m, d, parseInt($("inHour").value, 10)));
+});
+
+/* ============ 关系合盘 ============ */
+$("inHour2").innerHTML = $("inHour").innerHTML.replace(" selected", "");
+
+function zhiRelation(b1, b2) {
+  if (LIUHE[DZ[b1]] === DZ[b2]) return "liuhe";
+  if ((b1 + 12 - b2) % 12 === 6) return "chong";
+  if (b1 % 4 === b2 % 4 && b1 !== b2) return "sanhe";
+  if (b1 === b2) return "tong";
+  return "ping";
+}
+const ZHI_REL_NAME = { liuhe: "六合", chong: "相冲", sanhe: "三合", tong: "同气", ping: "平和" };
+
+function hepan() {
+  const v1 = $("inDate").value, v2 = $("inDate2").value;
+  if (!v1 || !v2) { alert("请先填写自己和 TA 的出生日期"); return; }
+  const [y1, m1, d1] = v1.split("-").map(Number);
+  const [y2, m2, d2] = v2.split("-").map(Number);
+  const me = paipan(y1, m1, d1, parseInt($("inHour").value, 10));
+  const ta = paipan(y2, m2, d2, parseInt($("inHour2").value, 10));
+  const meS = me.pillars[2].stem, taS = ta.pillars[2].stem;
+  const meB = me.dBranch, taB = ta.dBranch;
+  const eMe = WXG[meS], eTa = WXG[taS];
+  let score = 3, notes = [];
+  // --- 日主天干关系 ---
+  let relName, relText;
+  if ((taS - meS + 10) % 10 === 5) {
+    score += 1.5; relName = "天干五合";
+    relText = "两人日主天干相合（" + TG[meS] + "与" + TG[taS] + "合），天生有默契和吸引力，容易一见如故，是难得的缘分组合。";
+  } else if (eMe === eTa) {
+    score += 0.5; relName = "同气比肩";
+    relText = "两人日主同属" + eMe + "，节奏相似、容易懂彼此；但都固执时谁也不让谁，轮流低头是关键。";
+  } else if (SHENG[eMe] === eTa) {
+    relName = "我生 TA（滋养型）";
+    relText = "你在关系中付出较多、更愿意包容 TA；注意别变成单方面说教或宠溺，付出要有来有回。";
+  } else if (SHENG[eTa] === eMe) {
+    relName = "TA 生我（扶持型）";
+    relText = "TA 更照顾你、支持你，你是被滋养的一方；记得把感谢说出口，别把包容当成理所当然。";
+  } else if (KE[eMe] === eTa) {
+    score -= 0.5; relName = "我克 TA（主导型）";
+    relText = "你天然主导、说一不二，TA 容易妥协；大事多商量、给 TA 留表达空间，关系才能长久。";
+  } else {
+    score -= 0.5; relName = "TA 克我（管束型）";
+    relText = "TA 主导欲较强、管得多，你常让步；温和地建立边界感，既配合也保留自己的主见。";
+  }
+  // --- 日支关系 ---
+  const dr = zhiRelation(meB, taB);
+  if (dr === "liuhe") { score += 1.5; notes.push("日支六合：内心节奏合拍，相处松弛、有安全感，是长期关系的稳定器。"); }
+  else if (dr === "sanhe") { score += 1; notes.push("日支三合：气场相合、目标容易一致，一起做事、共同成长都很顺。"); }
+  else if (dr === "chong") { score -= 1.5; notes.push("日支相冲：生活习惯与情绪节奏差异大，容易同频五分钟、别扭一整天。约定一个「暂停键」，争吵不过夜。"); }
+  else if (dr === "tong") { notes.push("日支同气：习性相近、默契足，但也容易一起钻牛角尖，遇事互相提醒跳出来看。"); }
+  else { notes.push("日支无明显合冲，关系的走向更多取决于日常经营。"); }
+  // --- 生肖（年支）关系 ---
+  const yr = zhiRelation(me.yBranch, ta.yBranch);
+  if (yr === "liuhe") { score += 0.5; notes.push("生肖" + SX[me.yBranch] + "与" + SX[ta.yBranch] + "六合，家庭与长辈层面容易彼此认可。"); }
+  else if (yr === "sanhe") { score += 0.5; notes.push("生肖" + SX[me.yBranch] + "与" + SX[ta.yBranch] + "三合，趣味相投，玩得到一块。"); }
+  else if (yr === "chong") { score -= 0.5; notes.push("生肖" + SX[me.yBranch] + "与" + SX[ta.yBranch] + "相冲，价值观差异需要多沟通，就事论事、不上纲上线。"); }
+  else { notes.push("生肖" + SX[me.yBranch] + "与" + SX[ta.yBranch] + "平和，无明冲明合。"); }
+  // --- 五行互补 ---
+  const cntMe = wuxingStats(me.pillars), cntTa = wuxingStats(ta.pillars);
+  const stMe = strength(me.pillars), stTa = strength(ta.pillars);
+  const favMe = favorable(eMe, stMe.lvl, cntMe);
+  const favTa = favorable(eTa, stTa.lvl, cntTa);
+  const domTa = Object.keys(cntTa).reduce((a, b) => cntTa[a] >= cntTa[b] ? a : b);
+  const domMe = Object.keys(cntMe).reduce((a, b) => cntMe[a] >= cntMe[b] ? a : b);
+  let bud = 0;
+  if (favMe.includes(domTa)) { score += 0.5; bud++; notes.push("TA 五行旺" + domTa + "，恰好是你的喜用——TA 的出现正好补你的短板，多向 TA 取经。"); }
+  if (favTa.includes(domMe)) { score += 0.5; bud++; notes.push("你五行旺" + domMe + "，正好是 TA 的喜用——你是 TA 的贵人，TA 靠近你会更顺。"); }
+  if (bud === 0) notes.push("两人五行互补不明显，谈不上谁旺谁，重点放在性格磨合上。");
+  score = Math.max(1, Math.min(5, Math.round(score)));
+  // --- 输出 ---
+  const title = score >= 5 ? "天作之合" : score === 4 ? "上等契合" : score === 3 ? "中平之缘" : "需用心磨合";
+  $("hepanHead").innerHTML =
+    '<span class="fortune-pill">我：<span class="gz">' + TG[meS] + DZ[meB] + '</span> 日主' + TG[meS] + eMe +
+    '&nbsp;·&nbsp;TA：<span class="gz">' + TG[taS] + DZ[taB] + '</span> 日主' + TG[taS] + eTa + "</span>" +
+    '<span class="stars">' + "★".repeat(score) + "☆".repeat(5 - score) + "</span>" +
+    '<span class="chip"><b>' + title + "</b></span>" +
+    '<span class="chip">相处模式：<b>' + relName + "</b></span>" +
+    '<span class="chip">日支' + ZHI_REL_NAME[dr] + " · 生肖" + ZHI_REL_NAME[yr] + "</span>";
+  $("hepanText").innerHTML =
+    "<h3>核心相处模式</h3><div>" + relText + "</div>" +
+    "<h3>合冲细节</h3><div>" + notes.map(n => "· " + n).join("<br>") + "</div>" +
+    '<div class="advice-box"><b>相处锦囊：</b>契合度高不等于不用经营，契合度低也不代表不合适——合盘只是提示差异在哪里。' +
+    "多在彼此的喜用五行上使劲（如共同接触" + Array.from(new Set(favMe.concat(favTa))).map(f => f + "属性事物").join("、") +
+    "），把差异当互补而非对立，关系会越来越顺。</div>";
+  $("hepanResult").style.display = "block";
+  $("hepanResult").scrollIntoView({ behavior: "smooth" });
+}
+$("btnGo2").addEventListener("click", hepan);
+</script>
+</div>
+</body>
+</html>
